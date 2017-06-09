@@ -1,2 +1,2 @@
 # LCC-ng
-Next generation of Liwei's Compiler
+Next generation of **L**iwei's **C** **C**ompiler.

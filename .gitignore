@@ -50,3 +50,12 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Clion files
+cmake-build-debug
+.idea
+
+# yacc and lex
+y.tab.h
+y.tab.c
+lex.yy.c
