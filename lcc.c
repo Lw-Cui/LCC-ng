@@ -1,5 +1,7 @@
 #include "lcc.h"
 
+static Symbol *symtab = NULL;
+
 Symbol *make_symbol() {
     Symbol *ptr = (Symbol *) malloc(sizeof(Symbol));
     memset(ptr, 0, sizeof(Symbol));
@@ -25,6 +27,8 @@ Symbol *make_parameter_declaration(Symbol *type, Symbol *name) {
     sym->attr = parameter;
     sym->name = name->name;
     sym->basic_type = type->basic_type;
+    free_symbol(type);
+    free_symbol(name);
     return sym;
 }
 
@@ -51,6 +55,7 @@ Symbol *make_parameter_list(Symbol *decl) {
     list->attr = parameter_list;
     list->param = make_vector();
     push_back(list->param, decl);
+    free_symbol(decl);
     return list;
 }
 
@@ -59,23 +64,58 @@ Symbol *make_func_declarator(Symbol *name, Symbol *param_list) {
     list->attr = func_declarator;
     list->name = name->name;
     list->param = param_list->param;
+    free_symbol(name);
+    free_symbol(param_list);
     return list;
-}
-
-Symbol *make_func_signature(Symbol *type, Symbol *declarator) {
-    Symbol *signature = make_symbol();
-    signature->attr = func_signature;
-    signature->basic_type = type->basic_type;
-    signature->param = declarator->param;
-    signature->name = declarator->name;
-    return signature;
 }
 
 Symbol *make_func_definition(Symbol *signature, Symbol *stat) {
     Symbol *func_def = make_symbol();
     func_def->attr = function_definition;
+    func_def->parent = symtab;
     func_def->basic_type = signature->basic_type;
     func_def->name = signature->name;
     func_def->param = signature->param;
+    func_def->code = stat->code;
+    free_symbol(signature);
+    free_symbol(stat);
     return func_def;
+}
+
+void free_symbol(Symbol *sym) {
+    free(sym);
+}
+
+Symbol *make_declaration(Symbol *type, Symbol *declarator) {
+    switch (declarator->attr) {
+        case func_signature:
+            return make_func_declaration(type, declarator);
+        default:
+            info("not support yet");
+            return NULL;
+    }
+}
+
+Symbol *make_func_declaration(Symbol *type, Symbol *signature) {
+    Symbol *decl = make_symbol();
+    decl->attr = function_declaration;
+    decl->name = signature->name;
+    decl->param = signature->param;
+    decl->basic_type = type->basic_type;
+    decl->parent = symtab;
+    free_symbol(type);
+    free_symbol(signature);
+    return decl;
+}
+
+void make_new_scope() {
+    Symbol *scope = make_symbol();
+    scope->attr = new_scope;
+    scope->parent = symtab;
+    symtab = scope;
+}
+
+void destroy_scope() {
+    while (symtab->attr != new_scope) symtab = symtab->parent;
+    symtab = symtab->parent;
 }

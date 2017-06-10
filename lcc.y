@@ -201,7 +201,9 @@ constant_expression
 
 declaration
 	: declaration_specifiers ';'
-	| declaration_specifiers init_declarator_list ';'
+	| declaration_specifiers init_declarator_list ';' {
+	    $$ = make_declaration($1, $2);
+	}
 	| static_assert_declaration
 	;
 
@@ -480,8 +482,20 @@ labeled_statement
 
 compound_statement
 	: '{' '}'
-	| '{'  block_item_list '}'
+	| start_scope block_item_list end_scope {
+	    $$ = make_symbol();
+	}
 	;
+
+start_scope
+    : '{' {
+        make_new_scope();
+    }
+
+end_scope
+    : '}' {
+        destroy_scope();
+    }
 
 block_item_list
 	: block_item
@@ -540,7 +554,7 @@ function_definition
 function_definition_signature
     : declaration_specifiers declarator declaration_list
     | declaration_specifiers declarator {
-        $$ = make_func_signature($1, $2);
+        $$ = make_func_declaration($1, $2);
     }
     ;
 

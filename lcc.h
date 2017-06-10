@@ -17,6 +17,8 @@ typedef enum Attribute {
     func_declarator,
     func_signature,
     function_definition,
+    function_declaration,
+    new_scope,
 } Attribute;
 
 typedef enum Data_type {
@@ -38,7 +40,13 @@ typedef struct Symbol {
 
 Symbol *make_symbol();
 
+void free_symbol(Symbol *sym);
+
 Symbol *make_identifier(char *);
+
+void make_new_scope();
+
+void destroy_scope();
 
 Symbol *make_data_type(Data_type type);
 
@@ -48,9 +56,11 @@ Symbol *make_parameter_list(Symbol *decl);
 
 Symbol *make_func_declarator(Symbol *name, Symbol *param_list);
 
-Symbol *make_func_signature(Symbol *type, Symbol *declarator);
-
 Symbol *make_func_definition(Symbol *signature, Symbol *stat);
+
+ Symbol *make_declaration(Symbol *type, Symbol *declarator);
+
+Symbol *make_func_declaration(Symbol *type, Symbol *signature);
 
 void info(const char *fmt, ...);
 
