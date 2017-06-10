@@ -23,9 +23,8 @@ WS  [ \t\v\n\f]
 
 %{
 #include <stdio.h>
+#include "lcc.h"
 #include "y.tab.h"
-
-extern void yyerror(const char *);  /* prints grammar violation message */
 
 extern int sym_type(const char *);  /* returns type from symbol table */
 
@@ -56,7 +55,7 @@ static int check_type(void);
 "goto"					{ return(GOTO); }
 "if"					{ return(IF); }
 "inline"				{ return(INLINE); }
-"int"					{ return(INT); }
+"int"					{ yylval = make_data_type(int_type); return(INT); }
 "long"					{ return(LONG); }
 "register"				{ return(REGISTER); }
 "restrict"				{ return(RESTRICT); }
@@ -85,7 +84,7 @@ static int check_type(void);
 "_Thread_local"                         { return THREAD_LOCAL; }
 "__func__"                              { return FUNC_NAME; }
 
-{L}{A}*					{ return check_type(); }
+{L}{A}*					{ yylval = make_identifier(yytext); return check_type(); }
 
 {HP}{H}+{IS}?				{ return I_CONSTANT; }
 {NZ}{D}*{IS}?				{ return I_CONSTANT; }
@@ -174,7 +173,7 @@ static void comment(void)
             if (c == 0)
                 break;
         }
-    yyerror("unterminated comment");
+    info("unterminated comment");
 }
 
 static int check_type(void)

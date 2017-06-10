@@ -1,10 +1,5 @@
 %{
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-#include <string.h>
-#include <zconf.h>
+#include "lcc.h"
 
 #define YYDEBUG 1
 #ifdef YYDEBUG
@@ -12,8 +7,6 @@
 #endif
 
 int yylex(void);
-void yyerror(const char *s);
-
 %}
 
 %token	IDENTIFIER I_CONSTANT F_CONSTANT STRING_LITERAL FUNC_NAME SIZEOF
@@ -359,7 +352,9 @@ direct_declarator
 	| direct_declarator '[' type_qualifier_list assignment_expression ']'
 	| direct_declarator '[' type_qualifier_list ']'
 	| direct_declarator '[' assignment_expression ']'
-	| direct_declarator '(' parameter_type_list ')'
+	| direct_declarator '(' parameter_type_list ')' {
+        $$ = make_func_declarator($1, $3);
+	}
 	| direct_declarator '(' ')'
 	| direct_declarator '(' identifier_list ')'
 	;
@@ -383,12 +378,16 @@ parameter_type_list
 	;
 
 parameter_list
-	: parameter_declaration
+	: parameter_declaration {
+	    $$ = make_parameter_list($1);
+	}
 	| parameter_list ',' parameter_declaration
 	;
 
 parameter_declaration
-	: declaration_specifiers declarator
+	: declaration_specifiers declarator {
+	    $$ = make_parameter_declaration($1, $2);
+	}
 	| declaration_specifiers abstract_declarator
 	| declaration_specifiers
 	;
@@ -533,9 +532,17 @@ external_declaration
 	;
 
 function_definition
-	: declaration_specifiers declarator declaration_list compound_statement
-	| declaration_specifiers declarator compound_statement
+	: function_definition_signature compound_statement {
+        $$ = make_func_definition($1, $2);
+	}
 	;
+
+function_definition_signature
+    : declaration_specifiers declarator declaration_list
+    | declaration_specifiers declarator {
+        $$ = make_func_signature($1, $2);
+    }
+    ;
 
 declaration_list
 	: declaration
@@ -543,7 +550,3 @@ declaration_list
 	;
 
 %%
-void yyerror(const char *s) {
-	fflush(stdout);
-	fprintf(stderr, "*** %s\n", s);
-}
