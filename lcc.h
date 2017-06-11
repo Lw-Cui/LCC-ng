@@ -19,6 +19,7 @@ typedef enum Attribute {
     function_definition,
     function_declaration,
     new_scope,
+    statment,
 } Attribute;
 
 typedef enum Data_type {
@@ -58,9 +59,19 @@ Symbol *make_func_declarator(Symbol *name, Symbol *param_list);
 
 Symbol *make_func_definition(Symbol *signature, Symbol *stat);
 
- Symbol *make_declaration(Symbol *type, Symbol *declarator);
+Symbol *make_declaration(Symbol *type, Symbol *declarator);
 
 Symbol *make_func_declaration(Symbol *type, Symbol *signature);
+
+Symbol *make_empty_expression_stat();
+
+Assembly *make_assembly();
+
+Assembly *assembly_cat(Assembly *c1, Assembly *c2);
+
+void assembly_to_file(Symbol *code);
+
+void assembly_push_back(Assembly *code, String *piece);
 
 void info(const char *fmt, ...);
 

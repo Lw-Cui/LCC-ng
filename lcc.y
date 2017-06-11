@@ -483,7 +483,7 @@ labeled_statement
 compound_statement
 	: '{' '}'
 	| start_scope block_item_list end_scope {
-	    $$ = make_symbol();
+	    $$ = $2;
 	}
 	;
 
@@ -508,7 +508,9 @@ block_item
 	;
 
 expression_statement
-	: ';'
+	: ';' {
+        $$ = make_empty_expression_stat();
+	}
 	| expression ';'
 	;
 
@@ -536,8 +538,12 @@ jump_statement
 	;
 
 translation_unit
-	: external_declaration
-	| translation_unit external_declaration
+	: external_declaration {
+	    assembly_to_file($1);
+	}
+	| translation_unit external_declaration {
+	    assembly_to_file($2);
+	}
 	;
 
 external_declaration

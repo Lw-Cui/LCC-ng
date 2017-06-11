@@ -29,7 +29,7 @@ Vector *make_vector() {
     return p;
 }
 
-void push_back(Vector *vec, void *ptr) {
+void vec_push_back(Vector *vec, void *ptr) {
     if (vec->len == vec->capacity - 1) {
         resize(vec, vec->capacity * 2);
     }
@@ -61,7 +61,7 @@ void clear(Vector *vec) {
     vec->len = 0;
 }
 
-void del_vec(Vector *vec) {
+void free_vec(Vector *vec) {
     free(vec->body);
     free(vec);
 }
@@ -73,7 +73,7 @@ String *make_string(char *buf) {
     for (int i = 0; i < len; i++) {
         char *p = malloc(sizeof(char));
         *p = buf[i];
-        push_back(str->impl, p);
+        vec_push_back(str->impl, p);
     }
     return str;
 }
@@ -91,7 +91,7 @@ int size(Vector *vec) {
     return vec->len;
 }
 
-List_node *make_list(List_node *prev, void *body, List_node *next) {
+List_node *make_list_node(List_node *prev, void *body, List_node *next) {
     List_node *ptr = malloc(sizeof(List_node));
     ptr->body = body;
     ptr->prev = prev;
@@ -101,9 +101,9 @@ List_node *make_list(List_node *prev, void *body, List_node *next) {
     return ptr;
 }
 
-String * append_string(String *s1, String *s2) {
+String * string_cat(String *s1, String *s2) {
     for (int i = 0; i < len(s2); i++)
-        append_char(s1, string_pos(s2, i));
+        char_append(s1, string_pos(s2, i));
     return s1;
 }
 
@@ -111,10 +111,10 @@ int len(String *ptr) {
     return size(ptr->impl);
 }
 
-String * append_char(String *s1, char c) {
+String * char_append(String *s1, char c) {
     char *p = malloc(sizeof(char));
     *p = c;
-    push_back(s1->impl, p);
+    vec_push_back(s1->impl, p);
     return s1;
 }
 
@@ -122,9 +122,9 @@ char string_pos(String *ptr, int pos) {
     return *(char *) at(ptr->impl, pos);
 }
 
-String *merge_string(String *s1, String *s2) {
+String *string_merge(String *s1, String *s2) {
     String *tmp = make_string(str(s1));
-    append_string(tmp, s2);
+    string_cat(tmp, s2);
     return tmp;
 }
 
@@ -138,7 +138,7 @@ String *sprint(char *fmt, ...) {
     return make_string(buf);
 }
 
-void append_list(List_node *p1_beg, List_node *p1_end, List_node *p2_beg, List_node *p2_end) {
+void list_append(List_node *p1_beg, List_node *p1_end, List_node *p2_beg, List_node *p2_end) {
     if (p2_beg->next != p2_end) {
         List_node *prev = p1_end->prev;
         prev->next = p2_beg->next;

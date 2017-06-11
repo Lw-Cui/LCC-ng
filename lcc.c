@@ -1,6 +1,7 @@
 #include "lcc.h"
 
 static Symbol *symtab = NULL;
+FILE *output = NULL;
 
 Symbol *make_symbol() {
     Symbol *ptr = (Symbol *) malloc(sizeof(Symbol));
@@ -54,7 +55,7 @@ Symbol *make_parameter_list(Symbol *decl) {
     Symbol *list = make_symbol();
     list->attr = parameter_list;
     list->param = make_vector();
-    push_back(list->param, decl);
+    vec_push_back(list->param, decl);
     free_symbol(decl);
     return list;
 }
@@ -76,9 +77,16 @@ Symbol *make_func_definition(Symbol *signature, Symbol *stat) {
     func_def->basic_type = signature->basic_type;
     func_def->name = signature->name;
     func_def->param = signature->param;
-    func_def->code = stat->code;
+
+    Assembly *code = make_assembly();
+    assembly_push_back(code, sprint("\t.globl %s\n\t.type  %s, @function", str(func_def->name), str(func_def->name)));
+    assembly_push_back(code, sprint("%s:", str(func_def->name)));
+    assembly_push_back(code, make_string("\tpushq  %rbp"));
+    assembly_push_back(code, make_string("\tmovq   %rsp, %rbp"));
+    func_def->code = assembly_cat(code, stat->code);
     free_symbol(signature);
     free_symbol(stat);
+    //TODO: set formal parameter
     return func_def;
 }
 
@@ -119,3 +127,33 @@ void destroy_scope() {
     while (symtab->attr != new_scope) symtab = symtab->parent;
     symtab = symtab->parent;
 }
+
+Symbol *make_empty_expression_stat() {
+    Symbol *stat = make_symbol();
+    stat->attr = statment;
+    stat->code = make_assembly();
+    return stat;
+}
+
+Assembly *make_assembly() {
+    Assembly *ptr = malloc(sizeof(Assembly));
+    ptr->beg = make_list_node(NULL, NULL, NULL);
+    ptr->end = make_list_node(ptr->beg, NULL, NULL);
+    return ptr;
+}
+
+Assembly *assembly_cat(Assembly *c1, Assembly *c2) {
+    if (c2 != NULL) list_append(c1->beg, c1->end, c2->beg, c2->end);
+    return c1;
+}
+
+void assembly_push_back(Assembly *code, String *piece) {
+    make_list_node(code->end->prev, piece, code->end);
+}
+
+void assembly_to_file(Symbol *sym) {
+    for (List_node *p = sym->code->beg->next; p != sym->code->end; p = p->next)
+        fprintf(output, "%s\n", str(p->body));
+    free_symbol(sym);
+}
+
