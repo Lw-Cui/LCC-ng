@@ -55,6 +55,8 @@ Symbol *make_parameter_declaration(Symbol *type, Symbol *name);
 
 Symbol *make_parameter_list(Symbol *decl);
 
+Symbol *parameter_list_push_back(Symbol *list, Symbol *decl);
+
 Symbol *make_func_declarator(Symbol *name, Symbol *param_list);
 
 Symbol *make_func_definition(Symbol *signature, Symbol *stat);

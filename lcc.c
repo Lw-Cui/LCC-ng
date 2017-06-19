@@ -55,8 +55,7 @@ Symbol *make_parameter_list(Symbol *decl) {
     Symbol *list = make_symbol();
     list->attr = parameter_list;
     list->param = make_vector();
-    vec_push_back(list->param, decl);
-    free_symbol(decl);
+    parameter_list_push_back(list, decl);
     return list;
 }
 
@@ -86,6 +85,12 @@ Symbol *make_func_definition(Symbol *signature, Symbol *stat) {
     func_def->code = assembly_cat(code, stat->code);
     free_symbol(signature);
     free_symbol(stat);
+    /*
+    for (int i = 0; i < size(func_def->param); i++) {
+        String *tmp = ((Symbol *)at(func_def->param, i))->name;
+        info("%s", str(tmp));
+    }
+    */
     //TODO: set formal parameter
     return func_def;
 }
@@ -155,5 +160,10 @@ void assembly_to_file(Symbol *sym) {
     for (List_node *p = sym->code->beg->next; p != sym->code->end; p = p->next)
         fprintf(output, "%s\n", str(p->body));
     free_symbol(sym);
+}
+
+Symbol *parameter_list_push_back(Symbol *list, Symbol *decl) {
+    vec_push_back(list->param, decl);
+    return list;
 }
 

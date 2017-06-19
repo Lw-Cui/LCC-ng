@@ -383,7 +383,9 @@ parameter_list
 	: parameter_declaration {
 	    $$ = make_parameter_list($1);
 	}
-	| parameter_list ',' parameter_declaration
+	| parameter_list ',' parameter_declaration {
+	    $$ = parameter_list_push_back($1, $3);
+	}
 	;
 
 parameter_declaration
