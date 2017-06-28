@@ -8,6 +8,49 @@
 #include <zconf.h>
 #include "ADT.h"
 
+static char *arguments_reg[][4] = {
+        {
+                "dil",
+                "di",
+                "edi",
+                "rdi",
+        },
+        {
+
+                "sil",
+                "si",
+                "esi",
+                "rsi",
+        },
+        {
+                "dl",
+                "dx",
+                "edx",
+                "rdx",
+        },
+        {
+                "cl",
+                "cx",
+                "ecx",
+                "rcx",
+        }
+};
+
+
+static char op_suffix[] = {
+        'b', 'w', 'l', 'q',
+};
+
+static int actual_size[] = {
+        1, 2, 4, 8
+};
+
+typedef enum Size_type {
+    BYTE = 0,
+    WORD = 1,
+    LONG_WORD = 2,
+    QUAD_WORD = 3
+} Size_type;
 
 typedef enum Attribute {
     data_type,
@@ -23,7 +66,7 @@ typedef enum Attribute {
 } Attribute;
 
 typedef enum Data_type {
-    int_type,
+    int_type = LONG_WORD,
 } Data_type;
 
 typedef struct Assembly {
@@ -34,6 +77,7 @@ typedef struct Symbol {
     Attribute attr;
     String *name;
     Data_type basic_type;
+    int offset, rsp;
     Assembly *code;
     struct Symbol *parent;
     Vector *param;
@@ -59,7 +103,9 @@ Symbol *parameter_list_push_back(Symbol *list, Symbol *decl);
 
 Symbol *make_func_declarator(Symbol *name, Symbol *param_list);
 
-Symbol *make_func_definition(Symbol *signature, Symbol *stat);
+Symbol * add_func_body(Symbol *signature, Symbol *stat);
+
+Symbol *make_func_definition(Symbol *signature);
 
 Symbol *make_declaration(Symbol *type, Symbol *declarator);
 
@@ -74,6 +120,10 @@ Assembly *assembly_cat(Assembly *c1, Assembly *c2);
 void assembly_to_file(Symbol *code);
 
 void assembly_push_back(Assembly *code, String *piece);
+
+int allocate_stack(Data_type type);
+
+void symtab_append(Symbol *sym);
 
 void info(const char *fmt, ...);
 

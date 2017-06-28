@@ -1,6 +1,6 @@
 #include "lcc.h"
 
-static Symbol *symtab = NULL;
+static Symbol *symtab = NULL, *cur_func = NULL;
 FILE *output = NULL;
 
 Symbol *make_symbol() {
@@ -48,7 +48,7 @@ void yyerror(const char *fmt, ...) {
     va_start(ap, fmt);
     info(fmt, ap);
     va_end(ap);
-    exit(0);
+    abort();
 }
 
 Symbol *make_parameter_list(Symbol *decl) {
@@ -69,29 +69,33 @@ Symbol *make_func_declarator(Symbol *name, Symbol *param_list) {
     return list;
 }
 
-Symbol *make_func_definition(Symbol *signature, Symbol *stat) {
+Symbol *make_func_definition(Symbol *signature) {
     Symbol *func_def = make_symbol();
     func_def->attr = function_definition;
-    func_def->parent = symtab;
+    // AMD64 ABI required (rsp + 8) % 16 == 0, and after pushing %rsp (rsp % 16) == 0.
+    func_def->offset = func_def->rsp = 0;
+    symtab_append(func_def);
+    cur_func = func_def;
     func_def->basic_type = signature->basic_type;
     func_def->name = signature->name;
     func_def->param = signature->param;
-
-    Assembly *code = make_assembly();
-    assembly_push_back(code, sprint("\t.globl %s\n\t.type  %s, @function", str(func_def->name), str(func_def->name)));
-    assembly_push_back(code, sprint("%s:", str(func_def->name)));
-    assembly_push_back(code, make_string("\tpushq  %rbp"));
-    assembly_push_back(code, make_string("\tmovq   %rsp, %rbp"));
-    func_def->code = assembly_cat(code, stat->code);
-    free_symbol(signature);
-    free_symbol(stat);
-    /*
-    for (int i = 0; i < size(func_def->param); i++) {
-        String *tmp = ((Symbol *)at(func_def->param, i))->name;
-        info("%s", str(tmp));
+    func_def->code = make_assembly();
+    assembly_push_back(func_def->code,
+                       sprint("\t.globl %s\n\t.type  %s, @function", str(func_def->name), str(func_def->name)));
+    assembly_push_back(func_def->code, sprint("%s:", str(func_def->name)));
+    assembly_push_back(func_def->code, make_string("\tpushq  %rbp"));
+    assembly_push_back(func_def->code, make_string("\tmovq   %rsp, %rbp"));
+    for (int i = 0; i < size(signature->param); i++) {
+        Symbol *arg = (Symbol *) at(signature->param, i);
+        symtab_append(arg);
+        arg->offset = allocate_stack(arg->basic_type);
+        assembly_push_back(func_def->code, sprint("\t# passing %s %d byte(s) %d(%%rbp)",
+                                                  str(arg->name), actual_size[arg->basic_type], -arg->offset));
+        assembly_push_back(func_def->code, sprint("\tmov%c   %%%s, %d(%%rbp)",
+                                                  op_suffix[arg->basic_type],
+                                                  arguments_reg[i][arg->basic_type],
+                                                  -arg->offset));
     }
-    */
-    //TODO: set formal parameter
     return func_def;
 }
 
@@ -115,17 +119,21 @@ Symbol *make_func_declaration(Symbol *type, Symbol *signature) {
     decl->name = signature->name;
     decl->param = signature->param;
     decl->basic_type = type->basic_type;
-    decl->parent = symtab;
+    symtab_append(decl);
     free_symbol(type);
     free_symbol(signature);
     return decl;
 }
 
+void symtab_append(Symbol *sym) {
+    sym->parent = symtab;
+    symtab = sym;
+}
+
 void make_new_scope() {
     Symbol *scope = make_symbol();
     scope->attr = new_scope;
-    scope->parent = symtab;
-    symtab = scope;
+    symtab_append(scope);
 }
 
 void destroy_scope() {
@@ -165,5 +173,24 @@ void assembly_to_file(Symbol *sym) {
 Symbol *parameter_list_push_back(Symbol *list, Symbol *decl) {
     vec_push_back(list->param, decl);
     return list;
+}
+
+int allocate_stack(Data_type type) {
+    int size = actual_size[type];
+    for (int i = 0; i < size; i++)
+        // rsp only could be increased; stack top is designed to do alloc/free.
+        // Otherwise func call alignment cannot be satisfied
+        if ((cur_func->offset + i + size) % size == 0) {
+            cur_func->offset += i + size;
+            while (cur_func->offset > cur_func->rsp) cur_func->rsp += 16;
+            return cur_func->offset;
+        }
+    yyerror("Allocate stack error");
+}
+
+Symbol *add_func_body(Symbol *signature, Symbol *stat) {
+    signature->code = assembly_cat(signature->code, stat->code);
+    free_symbol(stat);
+    return signature;
 }
 
