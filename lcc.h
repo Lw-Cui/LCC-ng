@@ -42,14 +42,14 @@ static char op_suffix[] = {
 };
 
 static int actual_size[] = {
-        1, 2, 4, 8
+        1, 2, 4, 8,
 };
 
 typedef enum Size_type {
     BYTE = 0,
-    WORD = 1,
-    LONG_WORD = 2,
-    QUAD_WORD = 3
+    WORD,
+    LONG_WORD,
+    QUAD_WORD,
 } Size_type;
 
 typedef enum Attribute {
@@ -61,11 +61,15 @@ typedef enum Attribute {
     function_definition,        // int foo(int a, int b) { return a; }
     function_declaration,       // int foo(int a, int b)
 
-    new_scope,
-    statment,
+    new_scope,                  // { ... }
+    statement,                  // ...
+
+    local_var,                  // int a = 6, b = 5
+    init_list,                  // a = 6, b = 5
 } Attribute;
 
 typedef enum Data_type {
+    char_type = BYTE,
     int_type = LONG_WORD,
 } Data_type;
 
@@ -80,7 +84,7 @@ typedef struct Symbol {
     int offset, rsp;
     Assembly *code;
     struct Symbol *parent;
-    Vector *param;
+    Vector *param, *init_list;
 } Symbol;
 
 Symbol *make_symbol();
@@ -109,6 +113,14 @@ Symbol *make_func_signature(Symbol *signature);
 
 Symbol *make_func_declaration(Symbol *type, Symbol *signature);
 
+Symbol *make_declaration(Symbol *type, Symbol *list);
+
+Symbol *make_init_list();
+
+Symbol *init_list_push_back(Symbol *list, Symbol *);
+
+Symbol *block_item_cat(Symbol *list, Symbol *block);
+
 Symbol *make_empty_expression_stat();
 
 Assembly *make_assembly();
@@ -120,6 +132,12 @@ void assembly_to_file(Symbol *code);
 void assembly_push_back(Assembly *code, String *piece);
 
 int allocate_stack(Data_type type);
+
+Symbol *get_cur_func();
+
+void unset_cur_func();
+
+void set_cur_func(Symbol *func);
 
 void symtab_append(Symbol *sym);
 

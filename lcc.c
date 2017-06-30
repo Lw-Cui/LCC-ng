@@ -75,7 +75,7 @@ Symbol *make_func_signature(Symbol *signature) {
     // AMD64 ABI required (rsp + 8) % 16 == 0, and after pushing %rsp (rsp % 16) == 0.
     func_def->offset = func_def->rsp = 0;
     symtab_append(func_def);
-    cur_func = func_def;
+    set_cur_func(func_def);
     func_def->basic_type = signature->basic_type;
     func_def->name = signature->name;
     func_def->param = signature->param;
@@ -128,7 +128,7 @@ void destroy_scope() {
 
 Symbol *make_empty_expression_stat() {
     Symbol *stat = make_symbol();
-    stat->attr = statment;
+    stat->attr = statement;
     stat->code = make_assembly();
     return stat;
 }
@@ -162,13 +162,14 @@ Symbol *parameter_list_push_back(Symbol *list, Symbol *decl) {
 
 int allocate_stack(Data_type type) {
     int size = actual_size[type];
+    Symbol *func = get_cur_func();
     for (int i = 0; i < size; i++)
         // rsp only could be increased; stack top is designed to do alloc/free.
         // Otherwise func call alignment cannot be satisfied
-        if ((cur_func->offset + i + size) % size == 0) {
-            cur_func->offset += i + size;
-            while (cur_func->offset > cur_func->rsp) cur_func->rsp += 16;
-            return cur_func->offset;
+        if ((func->offset + i + size) % size == 0) {
+            func->offset += i + size;
+            while (func->offset > func->rsp) func->rsp += 16;
+            return func->offset;
         }
     yyerror("Allocate stack error");
 }
@@ -180,10 +181,59 @@ Symbol *make_func_definition(Symbol *func_def, Symbol *stat) {
     assembly_push_back(code, sprint("%s:", str(func_def->name)));
     assembly_push_back(code, make_string("\tpushq  %rbp"));
     assembly_push_back(code, make_string("\tmovq   %rsp, %rbp"));
-    assembly_push_back(code, sprint("\tsubq    %rsp, %d", func_def->rsp));;
+    assembly_push_back(code, sprint("\tsubq   %%rsp, %d", func_def->rsp));
     func_def->code = assembly_cat(code, func_def->code);
     func_def->code = assembly_cat(func_def->code, stat->code);
     free_symbol(stat);
+    unset_cur_func();
     return func_def;
+}
+
+void set_cur_func(Symbol *func) {
+    cur_func = func;
+}
+
+void unset_cur_func() {
+    cur_func = NULL;
+}
+
+Symbol *get_cur_func() {
+    return cur_func;
+}
+
+Symbol *make_declaration(Symbol *type, Symbol *list) {
+    Symbol *decl = make_symbol();
+    decl->code = make_assembly();
+    if (get_cur_func() != NULL) {
+        for (int i = 0; i < size(list->init_list); i++) {
+            Symbol *local = (Symbol *) at(list->init_list, i);
+            local->attr = local_var;
+            local->basic_type = type->basic_type;
+            local->offset = allocate_stack(local->basic_type);
+            symtab_append(local);
+            assembly_cat(decl->code, local->code);
+            assembly_push_back(decl->code,
+                               sprint("\t# allocate %s %d byte(s) %d(%%rbp)",
+                                      str(local->name), actual_size[local->basic_type], -local->offset));
+        }
+        return decl;
+    }
+}
+
+Symbol *make_init_list() {
+    Symbol *sym = make_symbol();
+    sym->attr = init_list;
+    sym->init_list = make_vector();
+    return sym;
+}
+
+Symbol *init_list_push_back(Symbol *list, Symbol *init) {
+    vec_push_back(list->init_list, init);
+    return list;
+}
+
+Symbol *block_item_cat(Symbol *list, Symbol *block) {
+    list->code = assembly_cat(list->code, block->code);
+    return list;
 }
 

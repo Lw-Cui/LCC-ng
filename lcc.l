@@ -41,7 +41,7 @@ static int check_type(void);
 "auto"					{ return(AUTO); }
 "break"					{ return(BREAK); }
 "case"					{ return(CASE); }
-"char"					{ return(CHAR); }
+"char"					{ yylval = make_data_type(char_type); return(CHAR); }
 "const"					{ return(CONST); }
 "continue"				{ return(CONTINUE); }
 "default"				{ return(DEFAULT); }

@@ -201,7 +201,9 @@ constant_expression
 
 declaration
 	: declaration_specifiers ';'
-	| declaration_specifiers init_declarator_list ';'
+	| declaration_specifiers init_declarator_list ';' {
+	    $$ = make_declaration($1, $2);
+	}
 	| static_assert_declaration
 	;
 
@@ -219,8 +221,13 @@ declaration_specifiers
 	;
 
 init_declarator_list
-	: init_declarator
-	| init_declarator_list ',' init_declarator
+	: init_declarator {
+	    $$ = make_init_list();
+	    $$ = init_list_push_back($$, $1);
+	}
+	| init_declarator_list ',' init_declarator {
+	    $$ = init_list_push_back($1, $3);
+	}
 	;
 
 init_declarator
@@ -499,7 +506,9 @@ end_scope
 
 block_item_list
 	: block_item
-	| block_item_list block_item
+	| block_item_list block_item {
+	    $$ = block_item_cat($1, $2);
+	}
 	;
 
 block_item
