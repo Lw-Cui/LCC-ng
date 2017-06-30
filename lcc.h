@@ -53,14 +53,14 @@ typedef enum Size_type {
 } Size_type;
 
 typedef enum Attribute {
-    data_type,
-    identifier,
-    parameter,
-    parameter_list,
-    func_declarator,
-    func_signature,
-    function_definition,
-    function_declaration,
+    data_type,                  // int
+    identifier,                 // a
+    parameter,                  // int a
+    parameter_list,             // int a, int b
+    func_declarator,            // foo(int a, int b)
+    function_definition,        // int foo(int a, int b) { return a; }
+    function_declaration,       // int foo(int a, int b)
+
     new_scope,
     statment,
 } Attribute;
@@ -103,11 +103,9 @@ Symbol *parameter_list_push_back(Symbol *list, Symbol *decl);
 
 Symbol *make_func_declarator(Symbol *name, Symbol *param_list);
 
-Symbol * add_func_body(Symbol *signature, Symbol *stat);
+Symbol *make_func_definition(Symbol *signature, Symbol *stat);
 
-Symbol *make_func_definition(Symbol *signature);
-
-Symbol *make_declaration(Symbol *type, Symbol *declarator);
+Symbol *make_func_signature(Symbol *signature);
 
 Symbol *make_func_declaration(Symbol *type, Symbol *signature);
 

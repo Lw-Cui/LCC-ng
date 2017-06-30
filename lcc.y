@@ -201,9 +201,7 @@ constant_expression
 
 declaration
 	: declaration_specifiers ';'
-	| declaration_specifiers init_declarator_list ';' {
-	    $$ = make_declaration($1, $2);
-	}
+	| declaration_specifiers init_declarator_list ';'
 	| static_assert_declaration
 	;
 
@@ -555,7 +553,7 @@ external_declaration
 
 function_definition
 	: function_definition_signature compound_statement {
-        $$ = add_func_body($1, $2);
+        $$ = make_func_definition($1, $2);
 	}
 	;
 
@@ -563,7 +561,7 @@ function_definition_signature
     : declaration_specifiers declarator declaration_list
     | declaration_specifiers declarator {
         $$ = make_func_declaration($1, $2);
-        $$ = make_func_definition($$);
+        $$ = make_func_signature($$);
     }
     ;
 

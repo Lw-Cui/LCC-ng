@@ -69,7 +69,7 @@ Symbol *make_func_declarator(Symbol *name, Symbol *param_list) {
     return list;
 }
 
-Symbol *make_func_definition(Symbol *signature) {
+Symbol *make_func_signature(Symbol *signature) {
     Symbol *func_def = make_symbol();
     func_def->attr = function_definition;
     // AMD64 ABI required (rsp + 8) % 16 == 0, and after pushing %rsp (rsp % 16) == 0.
@@ -80,11 +80,6 @@ Symbol *make_func_definition(Symbol *signature) {
     func_def->name = signature->name;
     func_def->param = signature->param;
     func_def->code = make_assembly();
-    assembly_push_back(func_def->code,
-                       sprint("\t.globl %s\n\t.type  %s, @function", str(func_def->name), str(func_def->name)));
-    assembly_push_back(func_def->code, sprint("%s:", str(func_def->name)));
-    assembly_push_back(func_def->code, make_string("\tpushq  %rbp"));
-    assembly_push_back(func_def->code, make_string("\tmovq   %rsp, %rbp"));
     for (int i = 0; i < size(signature->param); i++) {
         Symbol *arg = (Symbol *) at(signature->param, i);
         symtab_append(arg);
@@ -101,16 +96,6 @@ Symbol *make_func_definition(Symbol *signature) {
 
 void free_symbol(Symbol *sym) {
     free(sym);
-}
-
-Symbol *make_declaration(Symbol *type, Symbol *declarator) {
-    switch (declarator->attr) {
-        case func_signature:
-            return make_func_declaration(type, declarator);
-        default:
-            info("not support yet");
-            return NULL;
-    }
 }
 
 Symbol *make_func_declaration(Symbol *type, Symbol *signature) {
@@ -188,9 +173,17 @@ int allocate_stack(Data_type type) {
     yyerror("Allocate stack error");
 }
 
-Symbol *add_func_body(Symbol *signature, Symbol *stat) {
-    signature->code = assembly_cat(signature->code, stat->code);
+Symbol *make_func_definition(Symbol *func_def, Symbol *stat) {
+    Assembly *code = make_assembly();
+    assembly_push_back(code,
+                       sprint("\t.globl %s\n\t.type  %s, @function", str(func_def->name), str(func_def->name)));
+    assembly_push_back(code, sprint("%s:", str(func_def->name)));
+    assembly_push_back(code, make_string("\tpushq  %rbp"));
+    assembly_push_back(code, make_string("\tmovq   %rsp, %rbp"));
+    assembly_push_back(code, sprint("\tsubq    %rsp, %d", func_def->rsp));;
+    func_def->code = assembly_cat(code, func_def->code);
+    func_def->code = assembly_cat(func_def->code, stat->code);
     free_symbol(stat);
-    return signature;
+    return func_def;
 }
 
