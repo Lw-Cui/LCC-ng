@@ -156,3 +156,7 @@ int equal_string(String *s1, String *s2) {
         if (*(char *) at(s1->impl, idx) != *(char *) at(s2->impl, idx)) return 0;
     return 1;
 }
+
+void vec_pop_back(Vector *vec) {
+    vec->len--;
+}

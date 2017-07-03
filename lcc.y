@@ -30,7 +30,10 @@ int yylex(void);
 %%
 
 primary_expression
-	: IDENTIFIER
+	: IDENTIFIER {
+        $$ = make_expression();
+        Expr_stack_push($$, find_symbol($1));
+	}
 	| constant
 	| string
 	| '(' expression ')'
@@ -38,7 +41,7 @@ primary_expression
 	;
 
 constant
-	: I_CONSTANT		/* includes character_constant */
+	: I_CONSTANT		    /* includes character_constant */
 	| F_CONSTANT
 	| ENUMERATION_CONSTANT	/* after it has been defined as such */
 	;
@@ -117,7 +120,10 @@ multiplicative_expression
 
 additive_expression
 	: multiplicative_expression
-	| additive_expression '+' multiplicative_expression
+	| additive_expression '+' multiplicative_expression {
+	    $$ = make_expression_with_assembly($1, $3);
+        single_op($$, "add");
+    }
 	| additive_expression '-' multiplicative_expression
 	;
 

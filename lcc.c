@@ -1,6 +1,7 @@
 #include "lcc.h"
 
 static Symbol *symtab = NULL, *cur_func = NULL;
+static Expr_stack stack = {0};
 FILE *output = NULL;
 
 Symbol *make_symbol() {
@@ -83,7 +84,7 @@ Symbol *make_func_signature(Symbol *signature) {
     for (int i = 0; i < size(signature->param); i++) {
         Symbol *arg = (Symbol *) at(signature->param, i);
         symtab_append(arg);
-        arg->offset = allocate_stack(arg->basic_type);
+        allocate_stack(arg);
         assembly_push_back(func_def->code, sprint("\t# passing %s %d byte(s) %d(%%rbp)",
                                                   str(arg->name), actual_size[arg->basic_type], -arg->offset));
         assembly_push_back(func_def->code, sprint("\tmov%c   %%%s, %d(%%rbp)",
@@ -160,18 +161,19 @@ Symbol *parameter_list_push_back(Symbol *list, Symbol *decl) {
     return list;
 }
 
-int allocate_stack(Data_type type) {
-    int size = actual_size[type];
+void allocate_stack(Symbol *s) {
+    int size = actual_size[s->basic_type];
     Symbol *func = get_cur_func();
+    s->original = func->offset;
     for (int i = 0; i < size; i++)
         // rsp only could be increased; stack top is designed to do alloc/free.
         // Otherwise func call alignment cannot be satisfied
         if ((func->offset + i + size) % size == 0) {
             func->offset += i + size;
             while (func->offset > func->rsp) func->rsp += 16;
-            return func->offset;
+            s->offset = func->offset;
+            return;
         }
-    yyerror("Allocate stack error");
 }
 
 Symbol *make_func_definition(Symbol *func_def, Symbol *stat) {
@@ -181,7 +183,7 @@ Symbol *make_func_definition(Symbol *func_def, Symbol *stat) {
     assembly_push_back(code, sprint("%s:", str(func_def->name)));
     assembly_push_back(code, make_string("\tpushq  %rbp"));
     assembly_push_back(code, make_string("\tmovq   %rsp, %rbp"));
-    assembly_push_back(code, sprint("\tsubq   %%rsp, %d", func_def->rsp));
+    assembly_push_back(code, sprint("\tsubq   %%rsp, $%d", func_def->rsp));
     func_def->code = assembly_cat(code, func_def->code);
     func_def->code = assembly_cat(func_def->code, stat->code);
     free_symbol(stat);
@@ -209,7 +211,7 @@ Symbol *make_declaration(Symbol *type, Symbol *list) {
             Symbol *local = (Symbol *) at(list->init_list, i);
             local->attr = local_var;
             local->basic_type = type->basic_type;
-            local->offset = allocate_stack(local->basic_type);
+            allocate_stack(local);
             symtab_append(local);
             assembly_cat(decl->code, local->code);
             assembly_push_back(decl->code,
@@ -236,4 +238,116 @@ Symbol *block_item_cat(Symbol *list, Symbol *block) {
     list->code = assembly_cat(list->code, block->code);
     return list;
 }
+
+void init_expr_stack() {
+    stack.content = make_vector();
+    stack.eax = 0;
+}
+
+void Expr_stack_push(Symbol *expr, struct Symbol *s) {
+    if (stack.content == NULL)
+        init_expr_stack();
+    Symbol *new_top = make_symbol();
+    new_top->attr = temporary;
+    new_top->basic_type = s->basic_type;
+    new_top->name = s->name;
+    assembly_push_back(expr->code, sprint("\t# push %s", str(s->name)));
+    if (stack.eax == 1) {
+        Symbol *cur_top = (Symbol *) back(stack.content);
+        allocate_stack(cur_top);
+        assembly_push_back(expr->code, sprint("\tmov%c   %%%s, %d(%%rbp)",
+                                              op_suffix[cur_top->basic_type],
+                                              regular_reg[0][cur_top->basic_type],
+                                              -cur_top->offset
+        ));
+    }
+    if (s->attr == local_var)
+        assembly_push_back(expr->code, sprint("\tmov%c   %d(%%rbp), %%%s",
+                                              op_suffix[s->basic_type],
+                                              -s->offset,
+                                              regular_reg[0][s->basic_type]
+        ));
+    stack.eax = 1;
+    new_top->offset = new_top->original = 0;
+    vec_push_back(stack.content, new_top);
+}
+
+void Expr_stack_pop(Symbol *expr, int idx) {
+    if (stack.content == NULL)
+        yyerror("There is no element in stack");
+    Symbol *top = Expr_stack_top();
+    vec_pop_back(stack.content);
+    assembly_push_back(expr->code, sprint("\t# pop %s", str(top->name)));
+    if (stack.eax == 1) {
+        stack.eax = 0;
+    } else {
+        assembly_push_back(expr->code, sprint("\tmov%c   %d(%%rbp), %%%s",
+                                              op_suffix[top->basic_type],
+                                              -top->offset,
+                                              regular_reg[idx][top->basic_type]));
+        cur_func->offset = top->original;
+    }
+}
+
+Symbol *find_symbol(Symbol *name_sym) {
+    Symbol *s = symtab;
+    while (s != NULL && !equal_string(s->name, name_sym->name)) s = s->parent;
+    if (s == NULL) yyerror("Symbol named %s cannot be found", str(name_sym->name));
+    return s;
+}
+
+Symbol *make_expression() {
+    Symbol *expr = make_symbol();
+    expr->attr = expression;
+    expr->code = make_assembly();
+    return expr;
+}
+
+Symbol *make_expression_with_assembly(Symbol *p1, Symbol *p2) {
+    Symbol *expr = make_expression();
+    if (p1) assembly_cat(expr->code, p1->code);
+    if (p2) assembly_cat(expr->code, p2->code);
+    return expr;
+}
+
+void single_op(Symbol *expr, char *op_prefix) {
+    Symbol *op1 = Expr_stack_top();
+    Expr_stack_pop(expr, 0);
+    Symbol *op2 = Expr_stack_top();
+    Expr_stack_pop(expr, 1);
+    assembly_push_back(expr->code, sprint("\t# add %s and %s", str(op1->name), str(op2->name)));
+    Data_type max_type = max(op1->basic_type, op2->basic_type);
+    signal_extend(expr->code, 0, op1->basic_type, max_type);
+    signal_extend(expr->code, 1, op2->basic_type, max_type);
+    assembly_push_back(expr->code, sprint("\t%s%c   %%%s, %%%s",
+                                          op_prefix,
+                                          op_suffix[max_type],
+                                          regular_reg[1][max_type],
+                                          regular_reg[0][max_type]
+    ));
+    Symbol *res = make_symbol();
+    res->attr = temporary;
+    res->basic_type = max_type;
+    res->name = sprint("(%s %s %s)", str(op1->name), op_prefix, str(op2->name));
+    Expr_stack_push(expr, res);
+}
+
+void extend(Assembly *code, char *(*reg)[4], int idx, Data_type original, Data_type new) {
+    if (original >= new) return;
+    assembly_push_back(code, sprint("\tmovs%c%c %%%s, %%%s",
+                                    op_suffix[original],
+                                    op_suffix[new],
+                                    reg[idx][original],
+                                    reg[idx][new]
+    ));
+}
+
+void signal_extend(Assembly *code, int idx, Data_type original, Data_type new) {
+    extend(code, regular_reg, idx, original, new);
+}
+
+Symbol *Expr_stack_top() {
+    return (Symbol *) back(stack.content);
+}
+
 

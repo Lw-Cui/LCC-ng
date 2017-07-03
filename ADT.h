@@ -11,6 +11,8 @@ int size(Vector *vec);
 
 void *back(Vector *vec);
 
+void vec_pop_back(Vector *vec);
+
 void vec_push_back(Vector *vec, void *ptr);
 
 Vector *make_vector();
