@@ -97,11 +97,17 @@ typedef enum Attribute {
 } Attribute;
 
 typedef enum Size_type {
-    BYTE = 0,
+    BYTE,
     WORD,
     LONG_WORD,
     QUAD_WORD,
 } Size_type;
+
+typedef enum Op_type {
+    ADD,
+    SUB,
+    ASSIGN,
+} Op_type;
 
 typedef enum Data_type {
     char_type = BYTE,
@@ -116,7 +122,7 @@ typedef struct Symbol {
     Attribute attr;
     String *name;
     Data_type basic_type;
-    int offset, original;
+    int offset, upper_bound;    // upper_bound stores position of adjacency object
     int rsp;
     Assembly *code;
     struct Symbol *parent;
@@ -142,9 +148,9 @@ void extend(Assembly *code, char *reg[][4], int idx, Data_type original, Data_ty
 
 Symbol *find_symbol(Symbol *name);
 
-Symbol *make_symbol();
+static Symbol *make_symbol();
 
-void free_symbol(Symbol *sym);
+static void free_symbol(Symbol *sym);
 
 Symbol *make_identifier(char *);
 
@@ -172,9 +178,13 @@ Symbol *make_declaration(Symbol *type, Symbol *list);
 
 Symbol *make_expression();
 
-Symbol *make_expression_with_assembly(Symbol *p1, Symbol *p2);
+static Symbol *make_expression_with_assembly(Symbol *p1, Symbol *p2);
 
-void single_op(Symbol *expr, char *op_prefix);
+Symbol *make_op_expression(Symbol *p1, enum Op_type op, Symbol *p2);
+
+static void assign_op(Symbol *expr, Symbol *target);
+
+static void additive_op(Symbol *expr, char *op_prefix);
 
 Symbol *make_init_list();
 

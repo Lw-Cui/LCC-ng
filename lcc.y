@@ -31,8 +31,7 @@ int yylex(void);
 
 primary_expression
 	: IDENTIFIER {
-        $$ = make_expression();
-        Expr_stack_push($$, find_symbol($1));
+	    $$ = find_symbol($1);
 	}
 	| constant
 	| string
@@ -107,7 +106,10 @@ unary_operator
 	;
 
 cast_expression
-	: unary_expression
+	: unary_expression {
+        $$ = make_expression();
+        Expr_stack_push($$, $1);
+	}
 	| '(' type_name ')' cast_expression
 	;
 
@@ -121,10 +123,11 @@ multiplicative_expression
 additive_expression
 	: multiplicative_expression
 	| additive_expression '+' multiplicative_expression {
-	    $$ = make_expression_with_assembly($1, $3);
-        single_op($$, "add");
+	    $$ = make_op_expression($1, ADD, $3);
     }
-	| additive_expression '-' multiplicative_expression
+	| additive_expression '-' multiplicative_expression {
+	    $$ = make_op_expression($1, SUB, $3);
+    }
 	;
 
 shift_expression
@@ -179,7 +182,9 @@ conditional_expression
 
 assignment_expression
 	: conditional_expression
-	| unary_expression assignment_operator assignment_expression
+	| unary_expression assignment_operator assignment_expression {
+	    $$ = make_op_expression($1, ASSIGN, $3);
+	}
 	;
 
 assignment_operator

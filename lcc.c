@@ -164,7 +164,7 @@ Symbol *parameter_list_push_back(Symbol *list, Symbol *decl) {
 void allocate_stack(Symbol *s) {
     int size = actual_size[s->basic_type];
     Symbol *func = get_cur_func();
-    s->original = func->offset;
+    s->upper_bound = func->offset;
     for (int i = 0; i < size; i++)
         // rsp only could be increased; stack top is designed to do alloc/free.
         // Otherwise func call alignment cannot be satisfied
@@ -268,7 +268,7 @@ void Expr_stack_push(Symbol *expr, struct Symbol *s) {
                                               regular_reg[0][s->basic_type]
         ));
     stack.eax = 1;
-    new_top->offset = new_top->original = 0;
+    new_top->offset = new_top->upper_bound = 0;
     vec_push_back(stack.content, new_top);
 }
 
@@ -285,7 +285,7 @@ void Expr_stack_pop(Symbol *expr, int idx) {
                                               op_suffix[top->basic_type],
                                               -top->offset,
                                               regular_reg[idx][top->basic_type]));
-        cur_func->offset = top->original;
+        cur_func->offset = top->upper_bound;
     }
 }
 
@@ -307,15 +307,17 @@ Symbol *make_expression_with_assembly(Symbol *p1, Symbol *p2) {
     Symbol *expr = make_expression();
     if (p1) assembly_cat(expr->code, p1->code);
     if (p2) assembly_cat(expr->code, p2->code);
+    if (p1->attr == expression) free_symbol(p1);
+    if (p2->attr == expression) free_symbol(p2);
     return expr;
 }
 
-void single_op(Symbol *expr, char *op_prefix) {
+void additive_op(Symbol *expr, char *op_prefix) {
     Symbol *op1 = Expr_stack_top();
     Expr_stack_pop(expr, 0);
     Symbol *op2 = Expr_stack_top();
     Expr_stack_pop(expr, 1);
-    assembly_push_back(expr->code, sprint("\t# add %s and %s", str(op1->name), str(op2->name)));
+    assembly_push_back(expr->code, sprint("\t# %s %s %s", str(op2->name), op_prefix, str(op1->name)));
     Data_type max_type = max(op1->basic_type, op2->basic_type);
     signal_extend(expr->code, 0, op1->basic_type, max_type);
     signal_extend(expr->code, 1, op2->basic_type, max_type);
@@ -328,7 +330,7 @@ void single_op(Symbol *expr, char *op_prefix) {
     Symbol *res = make_symbol();
     res->attr = temporary;
     res->basic_type = max_type;
-    res->name = sprint("(%s %s %s)", str(op1->name), op_prefix, str(op2->name));
+    res->name = sprint("(%s %s %s)", str(op2->name), op_prefix, str(op1->name));
     Expr_stack_push(expr, res);
 }
 
@@ -348,6 +350,37 @@ void signal_extend(Assembly *code, int idx, Data_type original, Data_type new) {
 
 Symbol *Expr_stack_top() {
     return (Symbol *) back(stack.content);
+}
+
+Symbol *make_op_expression(Symbol *p1, enum Op_type op, Symbol *p2) {
+    Symbol *sym = make_expression_with_assembly(p1, p2);
+    switch (op) {
+        case ADD:
+            additive_op(sym, "add");
+            break;
+        case SUB:
+            additive_op(sym, "sub");
+            break;
+        case ASSIGN:
+            assign_op(sym, p1);
+            break;
+        default:
+            info("unsupported op");
+            break;
+    }
+    return sym;
+}
+
+void assign_op(Symbol *expr, Symbol *target) {
+    /* result must at eax */
+    Symbol *res = Expr_stack_top();
+    assembly_push_back(expr->code, sprint("\t# assign %s to %s", str(res->name), str(target->name)));
+    signal_extend(expr->code, 0, res->basic_type, max(res->basic_type, target->basic_type));
+    assembly_push_back(expr->code, sprint("\tmov%c   %%%s, %d(%%rbp)",
+                                          op_suffix[target->basic_type],
+                                          regular_reg[0][target->basic_type],
+                                          -target->offset
+    ));
 }
 
 
