@@ -129,18 +129,29 @@ typedef struct Symbol {
     Vector *param, *init_list;
 } Symbol;
 
+typedef enum Status {
+    Used,
+    Unused,
+} Status;
+
 typedef struct Expr_stack {
     Vector *content;
     int eax;
 } Expr_stack;
 
-void init_expr_stack();
+void expr_stack_init();
 
-void Expr_stack_push(Symbol *expr, struct Symbol *);
+int expr_stack_size();
 
-Symbol *Expr_stack_top();
+static void expr_stack_clear();
 
-void Expr_stack_pop(Symbol *expr, int idx);
+void expr_stack_push(Symbol *expr, struct Symbol *);
+
+void expr_stack_pop(Symbol *expr, int idx);
+
+Symbol *expr_stack_top();
+
+Symbol *end_statement(Symbol *assembly);
 
 void signal_extend(Assembly *code, int idx, Data_type original, Data_type new);
 

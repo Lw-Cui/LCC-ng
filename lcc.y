@@ -108,7 +108,7 @@ unary_operator
 cast_expression
 	: unary_expression {
         $$ = make_expression();
-        Expr_stack_push($$, $1);
+        expr_stack_push($$, $1);
 	}
 	| '(' type_name ')' cast_expression
 	;
@@ -531,7 +531,9 @@ expression_statement
 	: ';' {
         $$ = make_empty_expression_stat();
 	}
-	| expression ';'
+	| expression ';' {
+        $$ = end_statement($1);
+    }
 	;
 
 selection_statement

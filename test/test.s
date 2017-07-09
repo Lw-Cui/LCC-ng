@@ -36,3 +36,30 @@ foo:
 	movl   %eax, -16(%rbp)
 	# assign ((z add x) sub y) to x
 	movl   %eax, -12(%rbp)
+	# ------ EOF ------
+	# push z
+	movb   -17(%rbp), %al
+	# push x
+	movb   %al, -18(%rbp)
+	movl   -12(%rbp), %eax
+	# pop x
+	# pop z
+	movb   -18(%rbp), %bl
+	# z add x
+	movsbl %bl, %ebx
+	addl   %ebx, %eax
+	# push (z add x)
+	# push y
+	movl   %eax, -24(%rbp)
+	movl   -16(%rbp), %eax
+	# pop y
+	# pop (z add x)
+	movl   -24(%rbp), %ebx
+	# (z add x) sub y
+	subl   %ebx, %eax
+	# push ((z add x) sub y)
+	# assign ((z add x) sub y) to y
+	movl   %eax, -16(%rbp)
+	# assign ((z add x) sub y) to x
+	movl   %eax, -12(%rbp)
+	# ------ EOF ------
