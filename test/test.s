@@ -3,7 +3,7 @@
 foo:
 	pushq  %rbp
 	movq   %rsp, %rbp
-	subq   %rsp, $32
+	subq   $32, %rsp
 	# passing a 4 byte(s) -4(%rbp)
 	movl   %edi, -4(%rbp)
 	# passing b 4 byte(s) -8(%rbp)
@@ -26,15 +26,25 @@ foo:
 	# push y
 	movl   %eax, -24(%rbp)
 	movl   -16(%rbp), %eax
+	# push z
+	movl   %eax, -28(%rbp)
+	movb   -17(%rbp), %al
+	# pop z
 	# pop y
+	movl   -28(%rbp), %ebx
+	# y imul z
+	movsbl %al, %eax
+	imull  %ebx
+	# push (y imul z)
+	# pop (y imul z)
 	# pop (z add x)
 	movl   -24(%rbp), %ebx
-	# (z add x) sub y
+	# (z add x) sub (y imul z)
 	subl   %ebx, %eax
-	# push ((z add x) sub y)
-	# assign ((z add x) sub y) to y
+	# push ((z add x) sub (y imul z))
+	# assign ((z add x) sub (y imul z)) to y
 	movl   %eax, -16(%rbp)
-	# assign ((z add x) sub y) to x
+	# assign ((z add x) sub (y imul z)) to x
 	movl   %eax, -12(%rbp)
 	# ------ EOF ------
 	# push z
@@ -49,17 +59,8 @@ foo:
 	movsbl %bl, %ebx
 	addl   %ebx, %eax
 	# push (z add x)
-	# push y
-	movl   %eax, -24(%rbp)
-	movl   -16(%rbp), %eax
-	# pop y
-	# pop (z add x)
-	movl   -24(%rbp), %ebx
-	# (z add x) sub y
-	subl   %ebx, %eax
-	# push ((z add x) sub y)
-	# assign ((z add x) sub y) to y
+	# assign (z add x) to y
 	movl   %eax, -16(%rbp)
-	# assign ((z add x) sub y) to x
+	# assign (z add x) to x
 	movl   %eax, -12(%rbp)
 	# ------ EOF ------

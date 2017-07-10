@@ -78,12 +78,12 @@ static int actual_size[] = {
 };
 
 typedef enum Attribute {
-    data_type,                  // int
+    type_specifier,             // int
     identifier,                 // a
-    parameter,                  // int a
+    parameter_declaration,      // int a
     parameter_list,             // int a, int b
     func_declarator,            // foo(int a, int b)
-    function_definition,        // int foo(int a, int b) { return a; }
+    function_defination,        // int foo(int a, int b) { return a; }
     function_declaration,       // int foo(int a, int b)
 
     new_scope,                  // { ... }
@@ -91,7 +91,7 @@ typedef enum Attribute {
 
     local_var,                  // int a = 6, b = 5
     temporary,                  // temporary variable
-    init_list,                  // a = 6, b = 5
+    init_declarator_list,       // a = 6, b = 5
 
     expression,                 // a + b
 } Attribute;
@@ -104,6 +104,7 @@ typedef enum Size_type {
 } Size_type;
 
 typedef enum Op_type {
+    IMUL,
     ADD,
     SUB,
     ASSIGN,
@@ -179,9 +180,9 @@ Symbol *parameter_list_push_back(Symbol *list, Symbol *decl);
 
 Symbol *make_func_declarator(Symbol *name, Symbol *param_list);
 
-Symbol *make_func_definition(Symbol *signature, Symbol *stat);
+Symbol *make_func_def_step2(Symbol *signature, Symbol *stat);
 
-Symbol *make_func_signature(Symbol *signature);
+Symbol *make_fun_def_step1(Symbol *signature);
 
 Symbol *make_func_declaration(Symbol *type, Symbol *signature);
 
@@ -196,6 +197,8 @@ Symbol *make_op_expression(Symbol *p1, enum Op_type op, Symbol *p2);
 static void assign_op(Symbol *expr, Symbol *target);
 
 static void additive_op(Symbol *expr, char *op_prefix);
+
+static void multiplicative_op(Symbol *expr, char *op_prefix);
 
 Symbol *make_init_list();
 

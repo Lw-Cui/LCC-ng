@@ -19,14 +19,14 @@ Symbol *make_identifier(char *str) {
 
 Symbol *make_data_type(Data_type type) {
     Symbol *sym = make_symbol();
-    sym->attr = data_type;
+    sym->attr = type_specifier;
     sym->basic_type = type;
     return sym;
 }
 
 Symbol *make_parameter_declaration(Symbol *type, Symbol *name) {
     Symbol *sym = make_symbol();
-    sym->attr = parameter;
+    sym->attr = parameter_declaration;
     sym->name = name->name;
     sym->basic_type = type->basic_type;
     free_symbol(type);
@@ -70,9 +70,9 @@ Symbol *make_func_declarator(Symbol *name, Symbol *param_list) {
     return list;
 }
 
-Symbol *make_func_signature(Symbol *signature) {
+Symbol *make_fun_def_step1(Symbol *signature) {
     Symbol *func_def = make_symbol();
-    func_def->attr = function_definition;
+    func_def->attr = function_defination;
     // AMD64 ABI required (rsp + 8) % 16 == 0, and after pushing %rsp (rsp % 16) == 0.
     func_def->offset = func_def->rsp = 0;
     symtab_append(func_def);
@@ -176,14 +176,14 @@ void allocate_stack(Symbol *s) {
         }
 }
 
-Symbol *make_func_definition(Symbol *func_def, Symbol *stat) {
+Symbol *make_func_def_step2(Symbol *func_def, Symbol *stat) {
     Assembly *code = make_assembly();
     assembly_push_back(code,
                        sprint("\t.globl %s\n\t.type  %s, @function", str(func_def->name), str(func_def->name)));
     assembly_push_back(code, sprint("%s:", str(func_def->name)));
     assembly_push_back(code, make_string("\tpushq  %rbp"));
     assembly_push_back(code, make_string("\tmovq   %rsp, %rbp"));
-    assembly_push_back(code, sprint("\tsubq   %%rsp, $%d", func_def->rsp));
+    assembly_push_back(code, sprint("\tsubq   $%d, %%rsp", func_def->rsp));
     func_def->code = assembly_cat(code, func_def->code);
     func_def->code = assembly_cat(func_def->code, stat->code);
     free_symbol(stat);
@@ -224,7 +224,7 @@ Symbol *make_declaration(Symbol *type, Symbol *list) {
 
 Symbol *make_init_list() {
     Symbol *sym = make_symbol();
-    sym->attr = init_list;
+    sym->attr = init_declarator_list;
     sym->init_list = make_vector();
     return sym;
 }
@@ -362,6 +362,9 @@ Symbol *make_op_expression(Symbol *p1, enum Op_type op, Symbol *p2) {
         case SUB:
             additive_op(sym, "sub");
             break;
+        case IMUL:
+            multiplicative_op(sym, "imul");
+            break;
         case ASSIGN:
             assign_op(sym, p1);
             break;
@@ -401,6 +404,27 @@ Symbol *end_statement(Symbol *assembly) {
     expr_stack_clear();
     assembly_push_back(assembly->code, make_string("\t# ------ EOF ------"));
     return assembly;
+}
+
+void multiplicative_op(Symbol *expr, char *op_prefix) {
+    Symbol *op1 = expr_stack_top();
+    expr_stack_pop(expr, 0);
+    Symbol *op2 = expr_stack_top();
+    expr_stack_pop(expr, 1);
+    assembly_push_back(expr->code, sprint("\t# %s %s %s", str(op2->name), op_prefix, str(op1->name)));
+    Data_type max_type = max(op1->basic_type, op2->basic_type);
+    signal_extend(expr->code, 0, op1->basic_type, max_type);
+    signal_extend(expr->code, 1, op2->basic_type, max_type);
+    assembly_push_back(expr->code, sprint("\t%s%c  %%%s",
+                                          op_prefix,
+                                          op_suffix[max_type],
+                                          regular_reg[1][max_type]
+    ));
+    Symbol *res = make_symbol();
+    res->attr = temporary;
+    res->basic_type = max_type;
+    res->name = sprint("(%s %s %s)", str(op2->name), op_prefix, str(op1->name));
+    expr_stack_push(expr, res);
 }
 
 

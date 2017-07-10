@@ -115,7 +115,9 @@ cast_expression
 
 multiplicative_expression
 	: cast_expression
-	| multiplicative_expression '*' cast_expression
+	| multiplicative_expression '*' cast_expression {
+	     $$ = make_op_expression($1, IMUL, $3);
+	}
 	| multiplicative_expression '/' cast_expression
 	| multiplicative_expression '%' cast_expression
 	;
@@ -575,7 +577,7 @@ external_declaration
 
 function_definition
 	: function_definition_signature compound_statement {
-        $$ = make_func_definition($1, $2);
+        $$ = make_func_def_step2($1, $2);
 	}
 	;
 
@@ -583,7 +585,7 @@ function_definition_signature
     : declaration_specifiers declarator declaration_list
     | declaration_specifiers declarator {
         $$ = make_func_declaration($1, $2);
-        $$ = make_func_signature($$);
+        $$ = make_fun_def_step1($$);
     }
     ;
 
