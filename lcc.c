@@ -17,7 +17,7 @@ Symbol *make_identifier(char *str) {
     return sym;
 }
 
-Symbol *make_data_type(Data_type type) {
+Symbol *make_data_type(Size_type type) {
     Symbol *sym = make_symbol();
     sym->attr = type_specifier;
     sym->basic_type = type;
@@ -281,6 +281,10 @@ void expr_stack_pop(Symbol *assembly, int reg_idx) {
     assembly_push_back(assembly->code, sprint("\t# pop %s", str(top->name)));
     if (stack.eax == Used) {
         stack.eax = Unused;
+        assembly_push_back(assembly->code, sprint("\tmov%c   %%%s, %%%s",
+                                                  op_suffix[top->basic_type],
+                                                  regular_reg[0][top->basic_type],
+                                                  regular_reg[reg_idx][top->basic_type]));
     } else {
         assembly_push_back(assembly->code, sprint("\tmov%c   %d(%%rbp), %%%s",
                                                   op_suffix[top->basic_type],
@@ -319,7 +323,7 @@ void additive_op(Symbol *expr, char *op_prefix) {
     Symbol *op2 = expr_stack_top();
     expr_stack_pop(expr, 1);
     assembly_push_back(expr->code, sprint("\t# %s %s %s", str(op2->name), op_prefix, str(op1->name)));
-    Data_type max_type = max(op1->basic_type, op2->basic_type);
+    Size_type max_type = max(op1->basic_type, op2->basic_type);
     signal_extend(expr->code, 0, op1->basic_type, max_type);
     signal_extend(expr->code, 1, op2->basic_type, max_type);
     assembly_push_back(expr->code, sprint("\t%s%c   %%%s, %%%s",
@@ -335,7 +339,7 @@ void additive_op(Symbol *expr, char *op_prefix) {
     expr_stack_push(expr, res);
 }
 
-void extend(Assembly *code, char *(*reg)[4], int idx, Data_type original, Data_type new) {
+void extend(Assembly *code, char *reg[][4], int idx, Size_type original, Size_type new) {
     if (original >= new) return;
     assembly_push_back(code, sprint("\tmovs%c%c %%%s, %%%s",
                                     op_suffix[original],
@@ -345,7 +349,7 @@ void extend(Assembly *code, char *(*reg)[4], int idx, Data_type original, Data_t
     ));
 }
 
-void signal_extend(Assembly *code, int idx, Data_type original, Data_type new) {
+void signal_extend(Assembly *code, int idx, Size_type original, Size_type new) {
     extend(code, regular_reg, idx, original, new);
 }
 
@@ -364,6 +368,9 @@ Symbol *make_op_expression(Symbol *p1, enum Op_type op, Symbol *p2) {
             break;
         case IMUL:
             multiplicative_op(sym, "imul");
+            break;
+        case IDIV:
+            divisional_op(sym, "idiv");
             break;
         case ASSIGN:
             assign_op(sym, p1);
@@ -406,13 +413,33 @@ Symbol *end_statement(Symbol *assembly) {
     return assembly;
 }
 
+void divisional_op(Symbol *expr, char *op_prefix) {
+    Symbol *divisor = expr_stack_top();
+    expr_stack_pop(expr, 1);
+    Symbol *dividend = expr_stack_top();
+    Size_type divisor_type = max(divisor->basic_type, dividend->basic_type);
+    signal_extend(expr->code, 1, divisor->basic_type, divisor_type);
+    expr_stack_pop(expr, 0);
+    assembly_push_back(expr->code, sprint("\t# %s %s %s", str(dividend->name), op_prefix, str(divisor->name)));
+    assembly_push_back(expr->code, sprint("\t%s%c  %%%s",
+                                          op_prefix,
+                                          op_suffix[divisor_type],
+                                          regular_reg[1][divisor_type]
+    ));
+    Symbol *res = make_symbol();
+    res->attr = temporary;
+    res->basic_type = divisor_type;
+    res->name = sprint("(%s %s %s)", str(dividend->name), op_prefix, str(divisor->name));
+    expr_stack_push(expr, res);
+}
+
 void multiplicative_op(Symbol *expr, char *op_prefix) {
     Symbol *op1 = expr_stack_top();
     expr_stack_pop(expr, 0);
     Symbol *op2 = expr_stack_top();
     expr_stack_pop(expr, 1);
     assembly_push_back(expr->code, sprint("\t# %s %s %s", str(op2->name), op_prefix, str(op1->name)));
-    Data_type max_type = max(op1->basic_type, op2->basic_type);
+    Size_type max_type = max(op1->basic_type, op2->basic_type);
     signal_extend(expr->code, 0, op1->basic_type, max_type);
     signal_extend(expr->code, 1, op2->basic_type, max_type);
     assembly_push_back(expr->code, sprint("\t%s%c  %%%s",

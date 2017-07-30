@@ -105,15 +105,11 @@ typedef enum Size_type {
 
 typedef enum Op_type {
     IMUL,
+    IDIV,
     ADD,
     SUB,
     ASSIGN,
 } Op_type;
-
-typedef enum Data_type {
-    char_type = BYTE,
-    int_type = LONG_WORD,
-} Data_type;
 
 typedef struct Assembly {
     List_node *beg, *end;
@@ -122,7 +118,7 @@ typedef struct Assembly {
 typedef struct Symbol {
     Attribute attr;
     String *name;
-    Data_type basic_type;
+    Size_type basic_type;
     int offset, upper_bound;    // upper_bound stores position of adjacency object
     int rsp;
     Assembly *code;
@@ -154,9 +150,9 @@ Symbol *expr_stack_top();
 
 Symbol *end_statement(Symbol *assembly);
 
-void signal_extend(Assembly *code, int idx, Data_type original, Data_type new);
+void signal_extend(Assembly *code, int idx, Size_type original, Size_type new);
 
-void extend(Assembly *code, char *reg[][4], int idx, Data_type original, Data_type new);
+void extend(Assembly *code, char *reg[][4], int idx, Size_type original, Size_type new);
 
 Symbol *find_symbol(Symbol *name);
 
@@ -170,7 +166,7 @@ void make_new_scope();
 
 void destroy_scope();
 
-Symbol *make_data_type(Data_type type);
+Symbol *make_data_type(Size_type type);
 
 Symbol *make_parameter_declaration(Symbol *type, Symbol *name);
 
@@ -199,6 +195,8 @@ static void assign_op(Symbol *expr, Symbol *target);
 static void additive_op(Symbol *expr, char *op_prefix);
 
 static void multiplicative_op(Symbol *expr, char *op_prefix);
+
+static void divisional_op(Symbol *expr, char *op_prefix);
 
 Symbol *make_init_list();
 

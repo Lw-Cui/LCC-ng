@@ -3,4 +3,5 @@ int foo(int a, int b) {
     char z;
     x = y = z + x - y * z;
     x = y = z + x;
+    z = x / z;
 }

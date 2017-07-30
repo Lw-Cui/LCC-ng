@@ -118,7 +118,9 @@ multiplicative_expression
 	| multiplicative_expression '*' cast_expression {
 	     $$ = make_op_expression($1, IMUL, $3);
 	}
-	| multiplicative_expression '/' cast_expression
+	| multiplicative_expression '/' cast_expression {
+	     $$ = make_op_expression($1, IDIV, $3);
+	}
 	| multiplicative_expression '%' cast_expression
 	;
 
@@ -535,6 +537,7 @@ expression_statement
 	}
 	| expression ';' {
         $$ = end_statement($1);
+
     }
 	;
 

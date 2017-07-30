@@ -17,6 +17,7 @@ foo:
 	movb   %al, -18(%rbp)
 	movl   -12(%rbp), %eax
 	# pop x
+	movl   %eax, %eax
 	# pop z
 	movb   -18(%rbp), %bl
 	# z add x
@@ -30,6 +31,7 @@ foo:
 	movl   %eax, -28(%rbp)
 	movb   -17(%rbp), %al
 	# pop z
+	movb   %al, %al
 	# pop y
 	movl   -28(%rbp), %ebx
 	# y imul z
@@ -37,6 +39,7 @@ foo:
 	imull  %ebx
 	# push (y imul z)
 	# pop (y imul z)
+	movl   %eax, %eax
 	# pop (z add x)
 	movl   -24(%rbp), %ebx
 	# (z add x) sub (y imul z)
@@ -53,6 +56,7 @@ foo:
 	movb   %al, -18(%rbp)
 	movl   -12(%rbp), %eax
 	# pop x
+	movl   %eax, %eax
 	# pop z
 	movb   -18(%rbp), %bl
 	# z add x
@@ -63,4 +67,20 @@ foo:
 	movl   %eax, -16(%rbp)
 	# assign (z add x) to x
 	movl   %eax, -12(%rbp)
+	# ------ EOF ------
+	# push x
+	movl   -12(%rbp), %eax
+	# push z
+	movl   %eax, -24(%rbp)
+	movb   -17(%rbp), %al
+	# pop z
+	movb   %al, %bl
+	movsbl %bl, %ebx
+	# pop x
+	movl   -24(%rbp), %eax
+	# x idiv z
+	idivl  %ebx
+	# push (x idiv z)
+	# assign (x idiv z) to z
+	movb   %al, -17(%rbp)
 	# ------ EOF ------

@@ -41,7 +41,7 @@ static int check_type(void);
 "auto"					{ return(AUTO); }
 "break"					{ return(BREAK); }
 "case"					{ return(CASE); }
-"char"					{ yylval = make_data_type(char_type); return(CHAR); }
+"char"					{ yylval = make_data_type(BYTE); return(CHAR); }
 "const"					{ return(CONST); }
 "continue"				{ return(CONTINUE); }
 "default"				{ return(DEFAULT); }
@@ -55,7 +55,7 @@ static int check_type(void);
 "goto"					{ return(GOTO); }
 "if"					{ return(IF); }
 "inline"				{ return(INLINE); }
-"int"					{ yylval = make_data_type(int_type); return(INT); }
+"int"					{ yylval = make_data_type(LONG_WORD); return(INT); }
 "long"					{ return(LONG); }
 "register"				{ return(REGISTER); }
 "restrict"				{ return(RESTRICT); }
