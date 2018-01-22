@@ -140,7 +140,7 @@ void expr_stack_init();
 
 int expr_stack_size();
 
-static void expr_stack_clear();
+void expr_stack_clear();
 
 void expr_stack_push(Symbol *expr, struct Symbol *);
 
@@ -148,7 +148,7 @@ void expr_stack_pop(Symbol *expr, int idx);
 
 Symbol *expr_stack_top();
 
-Symbol *end_statement(Symbol *assembly);
+Symbol *end_expression_statement(Symbol *assembly);
 
 void signal_extend(Assembly *code, int idx, Size_type original, Size_type new);
 

@@ -246,7 +246,9 @@ init_declarator_list
 	;
 
 init_declarator
-	: declarator '=' initializer
+	: declarator '=' initializer {
+
+	}
 	| declarator
 	;
 
@@ -536,8 +538,8 @@ expression_statement
         $$ = make_empty_expression_stat();
 	}
 	| expression ';' {
-        $$ = end_statement($1);
-
+        $$ = end_expression_statement($1);
+        expr_stack_clear();
     }
 	;
 

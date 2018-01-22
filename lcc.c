@@ -407,8 +407,7 @@ int expr_stack_size() {
     return size(stack.content);
 }
 
-Symbol *end_statement(Symbol *assembly) {
-    expr_stack_clear();
+Symbol *end_expression_statement(Symbol *assembly) {
     assembly_push_back(assembly->code, make_string("\t# ------ EOF ------"));
     return assembly;
 }
