@@ -5,9 +5,7 @@ set(CMAKE_C_STANDARD 11)
 
 set(LCC_SOURCE_FILES
         main.c
-        lex.yy.c
-        y.tab.h y.tab.c
-        lcc.c lcc.h
+        lcc.c lcc.h lcc.internal.h
         ADT.h ADT.c)
 
 add_executable(LCC ${LCC_SOURCE_FILES})

@@ -1,4 +1,5 @@
 #include "lcc.h"
+#include "lcc.internal.h"
 
 static Symbol *symtab = NULL, *cur_func = NULL;
 static Expr_stack stack = {0};
@@ -10,19 +11,26 @@ Symbol *make_symbol() {
     return ptr;
 }
 
-Symbol *make_identifier(char *str) {
-    Symbol *sym = make_symbol();
-    sym->attr = identifier;
-    sym->name = make_string(str);
-    return sym;
+Entity *new_identifier(char *str) {
+    Identifier *ptr = MALLOC(Identifier);
+    ptr->base = new_entity(identifier);
+    ptr->name = make_string(str);
+    return ptr;
 }
 
-Symbol *make_data_type(Size_type type) {
-    Symbol *sym = make_symbol();
-    sym->attr = type_specifier;
-    sym->basic_type = type;
-    return sym;
+Entity *new_entity(Attribute attr) {
+    Entity *ptr = MALLOC(Entity);
+    ptr->attr = attr;
+    return ptr;
 }
+
+Entity *new_data_type(Size_type type) {
+    Data_type *ptr = MALLOC(Data_type);
+    ptr->base = new_entity(type_specifier);
+    ptr->size_type = type;
+    return ptr;
+}
+
 
 Symbol *make_parameter_declaration(Symbol *type, Symbol *name) {
     Symbol *sym = make_symbol();

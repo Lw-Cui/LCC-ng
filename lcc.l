@@ -84,7 +84,7 @@ static int check_type(void);
 "_Thread_local"                         { return THREAD_LOCAL; }
 "__func__"                              { return FUNC_NAME; }
 
-{L}{A}*					{ yylval = make_identifier(yytext); return check_type(); }
+{L}{A}*					{ yylval = new_identifier(yytext); return check_type(); }
 
 {HP}{H}+{IS}?				{ return I_CONSTANT; }
 {NZ}{D}*{IS}?				{ return I_CONSTANT; }

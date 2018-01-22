@@ -77,31 +77,7 @@ static int actual_size[] = {
     1, 2, 4, 8,
 };
 
-typedef enum Attribute {
-    type_specifier,             // int
-    identifier,                 // a
-    parameter_declaration,      // int a
-    parameter_list,             // int a, int b
-    func_declarator,            // foo(int a, int b)
-    function_defination,        // int foo(int a, int b) { return a; }
-    function_declaration,       // int foo(int a, int b)
 
-    new_scope,                  // { ... }
-    statement,                  // ...
-
-    local_var,                  // int a = 6, b = 5
-    temporary,                  // temporary variable
-    init_declarator_list,       // a = 6, b = 5
-
-    expression,                 // a + b
-} Attribute;
-
-typedef enum Size_type {
-    BYTE,
-    WORD,
-    LONG_WORD,
-    QUAD_WORD,
-} Size_type;
 
 typedef enum Op_type {
     IMUL,
@@ -156,11 +132,8 @@ void extend(Assembly *code, char *reg[][4], int idx, Size_type original, Size_ty
 
 Symbol *find_symbol(Symbol *name);
 
-static Symbol *make_symbol();
-
 static void free_symbol(Symbol *sym);
 
-Symbol *make_identifier(char *);
 
 void make_new_scope();
 
@@ -228,6 +201,6 @@ void info(const char *fmt, ...);
 
 void yyerror(const char *fmt, ...);
 
-#define YYSTYPE Symbol *
+#define YYSTYPE Entity *
 
 #endif //LCC_NG_LCC_H
